@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wood & Marble Tic Tac Toe</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at top, #1a0e05 0%, #0d0703 60%, #050300 100%);
+    font-family: 'Lato', sans-serif;
+    color: #e8d5b0;
+    overflow-x: hidden;
+    padding: 20px;
+  }
+
+  /* Subtle ambient particles */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(232,213,176,0.15) 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 70%, rgba(232,213,176,0.1) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 50%, rgba(232,213,176,0.08) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* === HEADER === */
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, #e8c97a 0%, #f5e4a8 40%, #c8a04a 70%, #e8c97a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 2px 8px rgba(200,160,74,0.4));
+  }
+
+  header p {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(232,213,176,0.45);
+    font-weight: 300;
+  }
+
+  /* === SCREEN TRANSITIONS === */
+  .screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn 0.4s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* === MODE SELECTION === */
+  #mode-screen {
+    gap: 24px;
+    text-align: center;
+  }
+
+  .mode-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: rgba(232,213,176,0.7);
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .mode-buttons {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .mode-btn {
+    position: relative;
+    width: 200px;
+    padding: 28px 20px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: linear-gradient(145deg, #3d2710 0%, #2a1a0a 50%, #1e1208 100%);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.6),
+      0 2px 0 rgba(255,220,120,0.15) inset,
+      0 -2px 0 rgba(0,0,0,0.4) inset;
+  }
+
+  .mode-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,200,80,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .mode-btn:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 16px 48px rgba(0,0,0,0.7),
+      0 2px 0 rgba(255,220,120,0.2) inset,
+      0 -2px 0 rgba(0,0,0,0.4) inset;
+  }
+
+  .mode-btn:active { transform: translateY(-1px); }
+
+  .mode-icon {
+    font-size: 2.8rem;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .mode-btn-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: #e8c97a;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .mode-btn-sub {
+    font-size: 0.75rem;
+    color: rgba(232,213,176,0.45);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: block;
+  }
+
+  /* === GAME SCREEN === */
+  #game-screen { gap: 24px; }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 420px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,213,176,0.1);
+  }
+
+  .status-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: #e8c97a;
+    flex: 1;
+    text-align: center;
+  }
+
+  .turn-indicator {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Score display */
+  .scores {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+  }
+
+  .score-box {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(232,213,176,0.08);
+  }
+
+  .score-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(232,213,176,0.4);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .score-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: #e8c97a;
+    display: block;
+  }
+
+  /* === BOARD === */
+  .board-wrap {
+    position: relative;
+    padding: 24px;
+    border-radius: 20px;
+    background:
+      /* Wood grain lines */
+      repeating-linear-gradient(
+        88deg,
+        transparent 0px,
+        transparent 18px,
+        rgba(0,0,0,0.06) 18px,
+        rgba(0,0,0,0.06) 20px,
+        transparent 20px,
+        transparent 36px,
+        rgba(255,255,255,0.025) 36px,
+        rgba(255,255,255,0.025) 37px
+      ),
+      repeating-linear-gradient(
+        92deg,
+        transparent 0px,
+        transparent 40px,
+        rgba(0,0,0,0.04) 40px,
+        rgba(0,0,0,0.04) 42px
+      ),
+      /* Base wood color */
+      linear-gradient(160deg, #5c3315 0%, #3d1f08 25%, #4a2810 50%, #2f1806 75%, #3a2010 100%);
+    box-shadow:
+      0 24px 80px rgba(0,0,0,0.8),
+      0 8px 24px rgba(0,0,0,0.5),
+      0 2px 0 rgba(255,200,100,0.12) inset,
+      0 -2px 0 rgba(0,0,0,0.5) inset,
+      4px 0 0 rgba(0,0,0,0.3) inset,
+      -4px 0 0 rgba(255,200,100,0.08) inset;
+  }
+
+  /* Wood edge bevel */
+  .board-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255,200,80,0.12) 0%, transparent 40%, rgba(0,0,0,0.2) 100%);
+    pointer-events: none;
+  }
+
+  /* Inset routed area for the grid */
+  .board-inset {
+    position: relative;
+    padding: 12px;
+    border-radius: 10px;
+    background:
+      linear-gradient(160deg, #2a1505 0%, #1e0f04 50%, #2a1505 100%);
+    box-shadow:
+      0 4px 16px rgba(0,0,0,0.6) inset,
+      0 1px 0 rgba(255,200,100,0.08),
+      0 -1px 0 rgba(0,0,0,0.5);
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    position: relative;
+  }
+
+  /* Grid lines drawn as borders */
+  .cell {
+    width: clamp(90px, 24vw, 130px);
+    height: clamp(90px, 24vw, 130px);
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 3px solid rgba(180,120,50,0.5);
+    border-bottom: 3px solid rgba(180,120,50,0.5);
+    transition: background 0.2s ease;
+  }
+
+  /* Remove outer borders */
+  .cell:nth-child(3n)   { border-right: none; }
+  .cell:nth-child(n+7)  { border-bottom: none; }
+
+  /* Subtle groove effect on grid lines */
+  .cell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-right: 1px solid rgba(255,200,100,0.08);
+    border-bottom: 1px solid rgba(255,200,100,0.08);
+  }
+  .cell:nth-child(3n)::after   { border-right: none; }
+  .cell:nth-child(n+7)::after  { border-bottom: none; }
+
+  /* Hover glow on empty cells */
+  .cell.empty:hover {
+    background: radial-gradient(circle at center, rgba(255,200,80,0.06) 0%, transparent 70%);
+  }
+
+  .cell.empty:hover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.02);
+  }
+
+  /* Ghost piece on hover */
+  .cell.empty.x-turn:hover .ghost,
+  .cell.empty.o-turn:hover .ghost {
+    opacity: 0.25;
+  }
+
+  .ghost {
+    position: absolute;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+    width: 65%;
+    height: 65%;
+    border-radius: 50%;
+  }
+
+  /* Winning cells highlight */
+  .cell.winner {
+    animation: winPulse 0.6s ease forwards;
+  }
+
+  @keyframes winPulse {
+    0%   { background: transparent; }
+    50%  { background: radial-gradient(circle, rgba(232,201,122,0.18) 0%, transparent 70%); }
+    100% { background: radial-gradient(circle, rgba(232,201,122,0.12) 0%, transparent 70%); }
+  }
+
+  /* === MARBLE PIECES === */
+  .piece {
+    width: 65%;
+    height: 65%;
+    border-radius: 50%;
+    position: relative;
+    animation: dropIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    flex-shrink: 0;
+  }
+
+  @keyframes dropIn {
+    from { transform: scale(0.3) translateY(-20px); opacity: 0; }
+    to   { transform: scale(1) translateY(0);       opacity: 1; }
+  }
+
+  /* X piece — white/light marble */
+  .piece-x {
+    background:
+      radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95) 0%, rgba(220,215,210,0.9) 30%, rgba(180,175,168,0.85) 60%, rgba(140,135,128,0.9) 100%);
+    box-shadow:
+      /* Main shadow below piece on wood */
+      0 8px 20px rgba(0,0,0,0.55),
+      0 4px 8px rgba(0,0,0,0.4),
+      /* Specular highlight */
+      inset -3px -4px 8px rgba(0,0,0,0.3),
+      inset 3px 4px 10px rgba(255,255,255,0.7),
+      /* Rim light */
+      inset -1px -1px 2px rgba(255,255,255,0.5);
+  }
+
+  /* Inner veining for white marble */
+  .piece-x::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 60% 65%, rgba(180,170,160,0.4) 0%, transparent 50%),
+      linear-gradient(115deg, transparent 30%, rgba(160,155,148,0.25) 45%, transparent 55%),
+      linear-gradient(55deg, transparent 40%, rgba(200,195,188,0.2) 55%, transparent 65%);
+    pointer-events: none;
+  }
+
+  /* X piece — shiny top highlight */
+  .piece-x::after {
+    content: '';
+    position: absolute;
+    top: 14%;
+    left: 22%;
+    width: 35%;
+    height: 22%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.85) 0%, transparent 100%);
+    transform: rotate(-20deg);
+    pointer-events: none;
+  }
+
+  /* O piece — dark/black marble */
+  .piece-o {
+    background:
+      radial-gradient(circle at 35% 30%, rgba(90,85,80,0.9) 0%, rgba(55,50,47,0.95) 35%, rgba(28,25,23,0.98) 65%, rgba(15,12,10,1) 100%);
+    box-shadow:
+      0 8px 20px rgba(0,0,0,0.7),
+      0 4px 8px rgba(0,0,0,0.5),
+      inset -3px -4px 8px rgba(0,0,0,0.6),
+      inset 3px 4px 10px rgba(120,110,100,0.25),
+      inset -1px -1px 2px rgba(100,90,80,0.3);
+  }
+
+  /* Dark marble veining */
+  .piece-o::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse at 55% 60%, rgba(60,55,50,0.5) 0%, transparent 50%),
+      linear-gradient(120deg, transparent 25%, rgba(80,72,65,0.35) 38%, transparent 48%),
+      linear-gradient(50deg, transparent 35%, rgba(55,50,45,0.2) 50%, transparent 62%),
+      linear-gradient(200deg, transparent 40%, rgba(100,88,75,0.15) 55%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* O piece — subtle specular */
+  .piece-o::after {
+    content: '';
+    position: absolute;
+    top: 14%;
+    left: 22%;
+    width: 32%;
+    height: 20%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(180,160,140,0.45) 0%, transparent 100%);
+    transform: rotate(-20deg);
+    pointer-events: none;
+  }
+
+  /* Piece shadow on board */
+  .piece-shadow {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 12px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.45) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Ghost pieces for hover */
+  .ghost-x {
+    background:
+      radial-gradient(circle at 35% 30%, rgba(255,255,255,0.6) 0%, rgba(220,215,210,0.5) 50%, rgba(180,175,168,0.4) 100%);
+    border-radius: 50%;
+  }
+
+  .ghost-o {
+    background:
+      radial-gradient(circle at 35% 30%, rgba(90,85,80,0.5) 0%, rgba(28,25,23,0.6) 100%);
+    border-radius: 50%;
+  }
+
+  /* === BUTTONS === */
+  .btn {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-gold {
+    background: linear-gradient(145deg, #c8a04a 0%, #e8c97a 40%, #c8a04a 70%, #a87030 100%);
+    color: #1a0e05;
+    box-shadow: 0 4px 16px rgba(200,160,74,0.35), 0 2px 0 rgba(255,220,120,0.4) inset;
+  }
+
+  .btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(200,160,74,0.45), 0 2px 0 rgba(255,220,120,0.4) inset;
+  }
+
+  .btn-gold:active { transform: translateY(0); }
+
+  .btn-ghost {
+    background: transparent;
+    color: rgba(232,213,176,0.5);
+    border: 1px solid rgba(232,213,176,0.15);
+    font-size: 0.8rem;
+  }
+
+  .btn-ghost:hover {
+    color: rgba(232,213,176,0.8);
+    border-color: rgba(232,213,176,0.3);
+  }
+
+  /* === BOTTOM CONTROLS === */
+  .game-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* === RESULT OVERLAY === */
+  .result-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: linear-gradient(145deg, rgba(30,15,5,0.97) 0%, rgba(20,10,3,0.97) 100%);
+    border: 1px solid rgba(232,201,122,0.3);
+    border-radius: 16px;
+    padding: 28px 36px;
+    text-align: center;
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.34,1.3,0.64,1);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.8);
+    width: 85%;
+    max-width: 320px;
+    backdrop-filter: blur(8px);
+  }
+
+  .result-banner.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: all;
+  }
+
+  .result-banner h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #e8c97a, #f5e4a8, #c8a04a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .result-banner p {
+    color: rgba(232,213,176,0.6);
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  .result-banner .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Win line overlay */
+  .win-line {
+    position: absolute;
+    background: linear-gradient(90deg, transparent, rgba(232,201,122,0.7), transparent);
+    border-radius: 3px;
+    transform-origin: left center;
+    animation: winLine 0.4s ease forwards;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  @keyframes winLine {
+    from { opacity: 0; transform-origin: left center; }
+    to   { opacity: 1; }
+  }
+
+  /* === MOVE COUNTER === */
+  .move-counter {
+    font-size: 0.75rem;
+    color: rgba(232,213,176,0.3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* === DISABLED STATE === */
+  .board.ended .cell { cursor: default; pointer-events: none; }
+  .board.ended .cell.empty:hover { background: transparent; }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 400px) {
+    .mode-buttons { flex-direction: column; align-items: center; }
+    .mode-btn { width: 180px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Wood &amp; Marble</h1>
+  <p>Classic Strategy Game</p>
+</header>
+
+<!-- MODE SELECTION SCREEN -->
+<div id="mode-screen" class="screen active">
+  <p class="mode-title">Choose Your Game</p>
+  <div class="mode-buttons">
+    <button class="mode-btn" onclick="startGame('2player')">
+      <span class="mode-icon">♟♟</span>
+      <span class="mode-btn-title">2 Players</span>
+      <span class="mode-btn-sub">Local Duel</span>
+    </button>
+    <button class="mode-btn" onclick="startGame('computer')">
+      <span class="mode-icon">♟🤖</span>
+      <span class="mode-btn-title">vs Computer</span>
+      <span class="mode-btn-sub">Challenge AI</span>
+    </button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div class="scores">
+    <div class="score-box">
+      <span class="score-label" id="p1-label">Player X</span>
+      <span class="score-value" id="score-x">0</span>
+    </div>
+    <div class="score-box">
+      <span class="score-label">Draws</span>
+      <span class="score-value" id="score-d">0</span>
+    </div>
+    <div class="score-box">
+      <span class="score-label" id="p2-label">Player O</span>
+      <span class="score-value" id="score-o">0</span>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="turn-indicator" id="turn-indicator"></div>
+    <span class="status-text" id="status-text">X's Turn</span>
+    <span class="move-counter" id="move-counter">Move 1</span>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board-inset" style="position:relative;">
+      <div class="board" id="board">
+        <!-- 9 cells generated by JS -->
+      </div>
+      <div class="result-banner" id="result-banner">
+        <h2 id="result-title">Winner!</h2>
+        <p id="result-sub">Congratulations</p>
+        <div class="btn-row">
+          <button class="btn btn-gold" onclick="playAgain()">Play Again</button>
+          <button class="btn btn-ghost" onclick="goHome()">Change Mode</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-controls">
+    <button class="btn btn-ghost" onclick="goHome()">← Change Mode</button>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let mode = '2player';
+let board = Array(9).fill(null);
+let current = 'X';
+let gameOver = false;
+let moveCount = 0;
+let scores = { X: 0, O: 0, D: 0 };
+let computerThinking = false;
+
+const WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8], // rows
+  [0,3,6],[1,4,7],[2,5,8], // cols
+  [0,4,8],[2,4,6]          // diags
+];
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function buildBoard() {
+  const el = document.getElementById('board');
+  el.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell empty x-turn';
+    cell.dataset.index = i;
+    // Ghost piece for hover
+    const ghost = document.createElement('div');
+    ghost.className = 'ghost ghost-x';
+    cell.appendChild(ghost);
+    cell.addEventListener('click', () => handleClick(i));
+    el.appendChild(cell);
+  }
+}
+
+function startGame(selectedMode) {
+  mode = selectedMode;
+  board = Array(9).fill(null);
+  current = 'X';
+  gameOver = false;
+  moveCount = 0;
+  computerThinking = false;
+
+  document.getElementById('p1-label').textContent = mode === 'computer' ? 'You (X)' : 'Player X';
+  document.getElementById('p2-label').textContent = mode === 'computer' ? 'Computer (O)' : 'Player O';
+
+  showScreen('game-screen');
+  buildBoard();
+  updateStatus();
+  updateScoreDisplay();
+  hideResult();
+}
+
+// ── Click Handler ──────────────────────────────────────────────────────────
+function handleClick(index) {
+  if (gameOver || board[index] || computerThinking) return;
+  if (mode === 'computer' && current === 'O') return;
+
+  placeMove(index, current);
+
+  const result = checkResult();
+  if (result) { endGame(result); return; }
+
+  switchTurn();
+
+  if (mode === 'computer' && current === 'O' && !gameOver) {
+    computerThinking = true;
+    updateStatus();
+    setTimeout(computerMove, 600 + Math.random() * 400);
+  }
+}
+
+function placeMove(index, player) {
+  board[index] = player;
+  moveCount++;
+  renderCell(index, player);
+  updateHoverClasses();
+}
+
+function computerMove() {
+  if (gameOver) { computerThinking = false; return; }
+  const idx = getBestMove();
+  placeMove(idx, 'O');
+  computerThinking = false;
+
+  const result = checkResult();
+  if (result) { endGame(result); return; }
+  switchTurn();
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function renderCell(index, player) {
+  const cell = document.querySelector(`[data-index="${index}"]`);
+  cell.classList.remove('empty', 'x-turn', 'o-turn');
+
+  const piece = document.createElement('div');
+  piece.className = `piece piece-${player.toLowerCase()}`;
+
+  const shadow = document.createElement('div');
+  shadow.className = 'piece-shadow';
+  piece.appendChild(shadow);
+
+  // Clear ghost, add piece
+  cell.innerHTML = '';
+  cell.appendChild(piece);
+}
+
+function updateHoverClasses() {
+  document.querySelectorAll('.cell.empty').forEach(c => {
+    c.classList.remove('x-turn', 'o-turn');
+    c.classList.add(current === 'X' ? 'x-turn' : 'o-turn');
+    const ghost = c.querySelector('.ghost');
+    if (ghost) {
+      ghost.className = `ghost ghost-${current.toLowerCase()}`;
+    }
+  });
+}
+
+function switchTurn() {
+  current = current === 'X' ? 'O' : 'X';
+  updateStatus();
+  updateHoverClasses();
+}
+
+// ── Status ─────────────────────────────────────────────────────────────────
+function updateStatus() {
+  const statusEl = document.getElementById('status-text');
+  const indicator = document.getElementById('turn-indicator');
+  const moveEl = document.getElementById('move-counter');
+
+  moveEl.textContent = `Move ${moveCount + 1}`;
+
+  if (gameOver) return;
+
+  if (computerThinking) {
+    statusEl.textContent = 'Computer is thinking…';
+    renderMarble(indicator, 'O');
+    return;
+  }
+
+  const playerName = mode === 'computer'
+    ? (current === 'X' ? 'Your' : "Computer's")
+    : `${current}'s`;
+
+  statusEl.textContent = `${playerName} Turn`;
+  renderMarble(indicator, current);
+}
+
+function renderMarble(el, player) {
+  el.style.cssText = player === 'X'
+    ? `background: radial-gradient(circle at 35% 30%, #fff 0%, #ddd 40%, #aaa 100%); box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 1px 2px 4px rgba(255,255,255,0.6);`
+    : `background: radial-gradient(circle at 35% 30%, #5a5550 0%, #2a2320 60%, #0f0c0a 100%); box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 1px 2px 4px rgba(120,100,80,0.2);`;
+}
+
+// ── Win Detection ──────────────────────────────────────────────────────────
+function checkResult() {
+  for (const line of WIN_LINES) {
+    const [a, b, c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      return { type: 'win', player: board[a], line };
+    }
+  }
+  if (board.every(Boolean)) return { type: 'draw' };
+  return null;
+}
+
+function endGame(result) {
+  gameOver = true;
+  document.getElementById('board').classList.add('ended');
+
+  if (result.type === 'win') {
+    scores[result.player]++;
+    highlightWinLine(result.line);
+    result.line.forEach(i => {
+      document.querySelector(`[data-index="${i}"]`).classList.add('winner');
+    });
+
+    const winnerName = mode === 'computer'
+      ? (result.player === 'X' ? 'You Win!' : 'Computer Wins!')
+      : `Player ${result.player} Wins!`;
+
+    showResult(winnerName, 'A masterful game of strategy.');
+  } else {
+    scores.D++;
+    showResult("It's a Draw!", 'A perfectly balanced contest.');
+  }
+
+  updateScoreDisplay();
+}
+
+function highlightWinLine(line) {
+  // Visual win line drawn over the board inset
+  const inset = document.querySelector('.board-inset');
+  const cells = document.querySelectorAll('.cell');
+  const cellSize = cells[0].offsetWidth;
+  const gap = 0;
+  const pad = 12;
+
+  const getCenter = idx => {
+    const col = idx % 3;
+    const row = Math.floor(idx / 3);
+    return {
+      x: pad + col * (cellSize + gap) + cellSize / 2,
+      y: pad + row * (cellSize + gap) + cellSize / 2
+    };
+  };
+
+  const p1 = getCenter(line[0]);
+  const p2 = getCenter(line[2]);
+
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  const lineEl = document.createElement('div');
+  lineEl.className = 'win-line';
+  lineEl.style.cssText = `
+    left: ${p1.x}px; top: ${p1.y - 2}px;
+    width: ${len}px; height: 4px;
+    transform: rotate(${angle}deg);
+  `;
+  inset.appendChild(lineEl);
+}
+
+// ── Result Banner ──────────────────────────────────────────────────────────
+function showResult(title, sub) {
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('result-banner').classList.add('show');
+  document.getElementById('status-text').textContent = title;
+}
+
+function hideResult() {
+  document.getElementById('result-banner').classList.remove('show');
+  // Remove any win lines
+  document.querySelectorAll('.win-line').forEach(e => e.remove());
+}
+
+// ── Score Display ──────────────────────────────────────────────────────────
+function updateScoreDisplay() {
+  document.getElementById('score-x').textContent = scores.X;
+  document.getElementById('score-o').textContent = scores.O;
+  document.getElementById('score-d').textContent = scores.D;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function playAgain() {
+  board = Array(9).fill(null);
+  current = 'X';
+  gameOver = false;
+  moveCount = 0;
+  computerThinking = false;
+  document.getElementById('board').classList.remove('ended');
+  buildBoard();
+  updateStatus();
+  hideResult();
+}
+
+function goHome() {
+  scores = { X: 0, O: 0, D: 0 };
+  showScreen('mode-screen');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Minimax AI ─────────────────────────────────────────────────────────────
+function getBestMove() {
+  // Opening: center or corner preference for natural play
+  if (moveCount === 0) return 4;
+
+  let best = -Infinity, bestIdx = -1;
+  for (let i = 0; i < 9; i++) {
+    if (!board[i]) {
+      board[i] = 'O';
+      const score = minimax(board, 0, false, -Infinity, Infinity);
+      board[i] = null;
+      if (score > best) { best = score; bestIdx = i; }
+    }
+  }
+  return bestIdx;
+}
+
+function minimax(b, depth, isMax, alpha, beta) {
+  const result = checkBoardResult(b);
+  if (result === 'O') return 10 - depth;
+  if (result === 'X') return depth - 10;
+  if (result === 'draw') return 0;
+
+  if (isMax) {
+    let best = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!b[i]) {
+        b[i] = 'O';
+        best = Math.max(best, minimax(b, depth+1, false, alpha, beta));
+        b[i] = null;
+        alpha = Math.max(alpha, best);
+        if (beta <= alpha) break;
+      }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (!b[i]) {
+        b[i] = 'X';
+        best = Math.min(best, minimax(b, depth+1, true, alpha, beta));
+        b[i] = null;
+        beta = Math.min(beta, best);
+        if (beta <= alpha) break;
+      }
+    }
+    return best;
+  }
+}
+
+function checkBoardResult(b) {
+  for (const [a,c,e] of WIN_LINES) {
+    if (b[a] && b[a] === b[c] && b[a] === b[e]) return b[a];
+  }
+  if (b.every(Boolean)) return 'draw';
+  return null;
+}
+</script>
+</body>
+</html>
